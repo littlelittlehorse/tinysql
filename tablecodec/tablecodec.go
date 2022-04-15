@@ -98,7 +98,29 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return
+
+	if key == nil || len(key) != RecordRowKeyLen {
+		//return 0, 0, errors.New("key is valid.")
+		return 0, 0, errInvalidRecordKey.GenWithStack("key is valid.")
+	}
+
+	// the format of key is t[table_id]_r[handle].
+
+	// the length of t[table_id] is tablePrefix + idLen, as 1 + 8 = 9.
+	key, tableID, err = codec.DecodeInt(key[1:])
+	if err != nil {
+		//return 0, 0, errors.New("DecodeInt tableID failed.")
+		return 0, 0, errInvalidRecordKey.GenWithStack("DecodeInt tableID failed.")
+	}
+
+	// the length of _r[handle] is tablePrefix + idLen, as 2 + 8 = 10.
+	key, handle, err = codec.DecodeInt(key[2:])
+	if err != nil {
+		//return 0, 0, errors.New("DecodeInt handle failed.")
+		return 0, 0, errInvalidRecordKey.GenWithStack("DecodeInt handle failed.")
+	}
+
+	return tableID, handle, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,6 +170,30 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+
+	// the format of key is t[tableID]_i[indexID]indexValues
+
+	if key == nil {
+		//return 0, 0, errors.New("key is valid.")
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("key is valid.")
+	}
+
+	key, tableID, err = codec.DecodeInt(key[1:])
+	if err != nil {
+		//return 0, 0, errors.New("DecodeInt tableID failed.")
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("DecodeInt tableID failed.")
+	}
+
+	indexValues, indexID, err = codec.DecodeInt(key[2:])
+	if err != nil {
+		//return 0, 0, errors.New("DecodeInt tableID failed.")
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("DecodeInt indexID failed.")
+	}
+
+	if indexValues == nil {
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("indexValues is valid.")
+	}
+
 	return tableID, indexID, indexValues, nil
 }
 
